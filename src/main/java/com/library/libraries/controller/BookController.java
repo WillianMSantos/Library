@@ -5,9 +5,14 @@ package com.library.libraries.controller;
 import com.library.libraries.dto.AuthorDto;
 import com.library.libraries.dto.BookDto;
 import com.library.libraries.dto.BookOneDto;
+import com.library.libraries.dto.BookUpdateDto;
+import com.library.libraries.exception.BookDeletionException;
+import com.library.libraries.exception.BookNotFoundException;
+import com.library.libraries.logging.LoggerFacade;
 import com.library.libraries.model.Status;
 import com.library.libraries.service.AuthorService;
 import com.library.libraries.service.BookService;
+import com.library.libraries.service.imp.BookServiceImp;
 import com.library.libraries.service.util.TPage;
 import io.swagger.annotations.*;
 import javassist.NotFoundException;
@@ -35,6 +40,7 @@ public class BookController {
         this.bookService = bookService;
     }
 
+    private static final LoggerFacade logger = new LoggerFacade(BookController.class);
 
     @GetMapping
     public ResponseEntity<List<BookDto>> getAll() throws NotFoundException {
@@ -42,8 +48,6 @@ public class BookController {
         return ResponseEntity.ok().body(bookDto);
     }
 
-
-    // localhost:8182/api/book/pagination?page=1&size=3
     @GetMapping("/pagination")
     public ResponseEntity<TPage<BookDto>> getAllByPagination(Pageable pageable) throws NotFoundException {
         TPage<BookDto> data = bookService.getAllPageable(pageable);
@@ -97,20 +101,49 @@ public class BookController {
             @ApiResponse(code = 500, message = "Internal server error occurred while attempting to delete the book")
     })
     @DeleteMapping("/books/{id}")
-    public ResponseEntity<?> deleteBook(@ApiParam(value = "The ID of the book to delete", required = true) @PathVariable("id") Long id) {
-        try {
+    public ResponseEntity<?> deleteBook(@ApiParam(value = "The ID of the book to delete", required = true) @PathVariable Long id) {
             bookService.delete(id);
-            return ResponseEntity.ok().body("Book successfully deleted.");
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error deleting book with id: " + id, e);
+            return ResponseEntity.ok().body("Book successfully deleted");
+    }
+
+
+    @ApiOperation(value = "Update Book", notes = "Update a book's details based on provided BookUpdateDto and book ID.")
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Successfully updated the book"),
+            @ApiResponse(code = 404, message = "Book not found with the provided ID"),
+            @ApiResponse(code = 400, message = "Invalid update request or book is RENTED"),
+            @ApiResponse(code = 500, message = "Internal server error")
+    })
+    @PutMapping("/{id}")
+    public ResponseEntity<BookUpdateDto> updateBook(@PathVariable Long id, @Valid @RequestBody BookUpdateDto bookUpdateDto) {
+        try {
+            BookUpdateDto updatedBookDto = bookService.update(id, bookUpdateDto);
+            return ResponseEntity.ok(updatedBookDto);
+        } catch (NotFoundException e) {
+            logger.error("Error updating book: {}", e.getMessage());
+            return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            logger.error("Error updating book: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(null);
         }
     }
 
+
+    @ApiOperation(value = "Search Books", notes = "Search for books based on provided criteria in BookDto.")
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Successfully retrieved list of books"),
+            @ApiResponse(code = 204, message = "No content, no books found matching the criteria"),
+            @ApiResponse(code = 500, message = "Internal server error")
+    })
+    @PostMapping("/search")
+    public ResponseEntity<List<BookDto>> searchBooks(@ApiParam(value = "Book search criteria", required = true)
+                                                         @RequestBody BookDto bookDto) {
+        List<BookDto> bookDtos = bookService.searchBooks(bookDto);
+        return ResponseEntity.ok(bookDtos);
+    }
 
     @GetMapping("/statuses")
     public ResponseEntity<List<Status>> getAllBookStatus() {
         return ResponseEntity.ok(Arrays.asList(Status.values()));
     }
-
-
 }
