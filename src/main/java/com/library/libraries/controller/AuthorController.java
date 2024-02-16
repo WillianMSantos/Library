@@ -3,6 +3,8 @@ package com.library.libraries.controller;
 
 import com.library.libraries.dto.AuthorDto;
 import com.library.libraries.dto.AuthorOneDto;
+import com.library.libraries.dto.AuthorUpdateDto;
+import com.library.libraries.exception.AuthorNotFoundException;
 import com.library.libraries.service.AuthorService;
 import com.library.libraries.service.util.TPage;
 import io.swagger.annotations.*;
@@ -82,6 +84,48 @@ public class AuthorController {
         return ResponseEntity.ok(authorDto);
     }
 
+    @ApiOperation(value = "Update an author", notes = "Updates the details of an existing author by ID.")
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Successfully updated the author"),
+            @ApiResponse(code = 404, message = "The author with the specified ID was not found"),
+            @ApiResponse(code = 400, message = "Invalid request data")
+    })
+    @PutMapping("/{id}")
+    public ResponseEntity<AuthorUpdateDto> updateAuthor(
+            @ApiParam(value = "ID of the author to update", required = true) @PathVariable Long id,
+            @ApiParam(value = "Updated author data", required = true) @Valid @RequestBody AuthorUpdateDto authorUpdateDto) {
+
+        try {
+            AuthorUpdateDto updatedAuthor = authorService.update(id, authorUpdateDto);
+            return ResponseEntity.ok(updatedAuthor);
+        } catch (AuthorNotFoundException ex) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception ex) {
+            return ResponseEntity.badRequest().body(null);
+        }
+    }
+
+
+
+    @ApiOperation(value = "Delete an author by ID", notes = "Deletes an author with the specified ID.")
+    @ApiResponses(value = {
+            @ApiResponse(code = 204, message = "Author successfully deleted"),
+            @ApiResponse(code = 404, message = "The author with the specified ID was not found"),
+            @ApiResponse(code = 401, message = "You are not authorized to delete the resource"),
+            @ApiResponse(code = 403, message = "Deleting the resource is forbidden")
+    })
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteAuthor(@ApiParam(value = "ID of the author to delete", required = true) @PathVariable Long id) {
+        try {
+            authorService.delete(id);
+            return ResponseEntity.noContent().build();
+        } catch (AuthorNotFoundException ex) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception ex) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 
     @ApiOperation(value = "Create a new author", notes = "Creates a new author with the provided information.")
     @ApiResponses(value = {
@@ -93,5 +137,4 @@ public class AuthorController {
         AuthorDto savedAuthorDto = authorService.save(authorDto);
         return new ResponseEntity<>(savedAuthorDto, HttpStatus.CREATED);
     }
-
 }

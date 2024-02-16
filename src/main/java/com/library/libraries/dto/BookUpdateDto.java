@@ -1,6 +1,5 @@
 package com.library.libraries.dto;
 
-
 import com.library.libraries.model.Status;
 import lombok.Data;
 import lombok.Getter;
@@ -13,27 +12,20 @@ import javax.validation.constraints.NotNull;
 @Setter
 @NoArgsConstructor
 @Data
-public class BookDto {
+public class BookUpdateDto {
+
 
     private Long id;
-
     @NotNull
     private String title;
 
     @NotNull
+    private Long authorId;
+
+    @NotNull
     private String isbn;
-
-    private Integer publishYear;
-
-    private Long studentId;
 
     private Status status;
 
-    @NotNull
-    private Long authorId;
-
     private AuthorDtoForOneEntity author;
-
-    private StudentDtoForOneEntity student;
-
 }
